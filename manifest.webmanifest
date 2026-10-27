@@ -1,0 +1,14 @@
+{
+  "name": "Ahorra+",
+  "short_name": "Ahorra+",
+  "description": "Cuánto puedes gastar hoy sin romper tu meta de ahorro del mes.",
+  "lang": "es-PE",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#0f6b4f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

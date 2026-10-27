@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Ahorra+: calcula cuánto puedes gastar hoy sin romper tu meta de ahorro del mes.">
+<meta name="theme-color" content="#0f6b4f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Ahorra+</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f6f4;--surface:#fff;--ink:#12261f;--muted:#5b6f67;--line:#d5e0db;--brand:#0f6b4f;--brand-ink:#fff;
+--ok:#0f6b4f;--warn:#b7791f;--bad:#b42318;--okbg:#e2f3ec;--warnbg:#fbf0d9;--badbg:#fde8e6;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a15;--surface:#16261f;--ink:#e8f1ed;--muted:#9fb5ab;--line:#2a4136;--brand:#4cc99b;--brand-ink:#08140f;
+--ok:#4cc99b;--warn:#e8b85a;--bad:#f28b82;--okbg:#17382b;--warnbg:#3a2f14;--badbg:#401a18;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1a15;--surface:#16261f;--ink:#e8f1ed;--muted:#9fb5ab;--line:#2a4136;--brand:#4cc99b;--brand-ink:#08140f;
+--ok:#4cc99b;--warn:#e8b85a;--bad:#f28b82;--okbg:#17382b;--warnbg:#3a2f14;--badbg:#401a18;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+main{max-width:420px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.15rem;margin:0 0 4px}
+p{margin:0}
+.muted{color:var(--muted);font-size:.9rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:14px}
+label{display:block;font-weight:600;margin-top:14px;font-size:.95rem}
+.hint{font-weight:400;color:var(--muted);font-size:.85rem}
+input{width:100%;margin-top:6px;padding:12px;font-size:1.05rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus,button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:0;padding:13px 16px;font-weight:600}
+.primary{background:var(--brand);color:var(--brand-ink);width:100%;margin-top:6px}
+.ghost{background:transparent;color:var(--muted);padding:6px 8px;font-weight:500;font-size:.9rem}
+.err{color:var(--bad);margin-top:10px;font-size:.9rem;min-height:1.2em}
+.notice{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:.9rem}
+.hero{text-align:center;border-radius:18px;padding:26px 16px;border:1px solid var(--line)}
+.hero.ok{background:var(--okbg);color:var(--ok)}.hero.warn{background:var(--warnbg);color:var(--warn)}.hero.bad{background:var(--badbg);color:var(--bad)}
+.hero .big{font-size:3.3rem;font-weight:800;line-height:1.05;margin:6px 0;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hero .lbl{font-size:1rem;font-weight:600}
+.hero .sub{font-size:.9rem;color:var(--ink);opacity:.85;margin-top:6px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:10px}
+.bar>i{display:block;height:100%;background:currentColor;width:0;transition:width .25s}
+ul{list-style:none;margin:8px 0 0;padding:0}
+li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+li:last-child{border:0}
+li span{overflow-wrap:anywhere}
+li button{padding:4px 8px;background:transparent;color:var(--muted);font-weight:500;flex:none}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.stats div{font-size:.85rem;color:var(--muted)}
+.stats b{display:block;font-size:1.1rem;color:var(--ink);font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+.fine{margin-top:22px;text-align:center}
+</style>
+</head>
+<body>
+<main>
+<section id="setup">
+  <h1>Ahorra+</h1>
+  <p class="muted">Configúrala una vez al mes. Después solo registras tus gastos.</p>
+  <p class="notice" id="newmonth" hidden>Empezó un nuevo mes. Revisa tus montos y confirma.</p>
+  <form class="card" id="setupForm" novalidate>
+    <label for="inc">Ingreso del mes (S/) <span class="hint">Si es variable, pon el mínimo que esperas</span></label>
+    <input id="inc" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ej.: 1500" required>
+    <label for="fix">Gastos fijos del mes (S/) <span class="hint">Alquiler, pasajes, servicios, cuotas</span></label>
+    <input id="fix" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ej.: 600">
+    <label for="goal">Meta de ahorro del mes (S/)</label>
+    <input id="goal" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ej.: 200">
+    <label for="prev">Ya gastaste este mes (S/) <span class="hint">Opcional: gastos variables que no registraste en la app</span></label>
+    <input id="prev" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+    <p class="err" id="serr" role="alert"></p>
+    <button class="primary" type="submit">Ver cuánto puedo gastar hoy</button>
+    <button class="ghost" type="button" id="cancel" hidden style="width:100%;margin-top:8px">Cancelar</button>
+  </form>
+</section>
+
+<section id="home" hidden>
+  <div class="hero" id="hero" aria-live="polite">
+    <div class="lbl">Disponible hoy</div>
+    <div class="big" id="avail">S/ 0</div>
+    <div class="sub" id="msg"></div>
+    <div class="bar" aria-hidden="true"><i id="fill"></i></div>
+  </div>
+  <form class="card" id="addForm" novalidate>
+    <label for="amt" style="margin-top:0">Registrar gasto (S/)</label>
+    <div class="row">
+      <input id="amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Monto">
+      <input id="note" type="text" maxlength="40" placeholder="Nota (opcional)">
+    </div>
+    <p class="err" id="herr" role="alert"></p>
+    <button class="primary" type="submit">Guardar gasto</button>
+  </form>
+  <div class="card">
+    <strong>Gastos de hoy</strong>
+    <ul id="list"></ul>
+    <p class="muted" id="empty">Aún no registras gastos hoy.</p>
+  </div>
+  <div class="card">
+    <strong id="monthTitle">Este mes</strong>
+    <div class="stats">
+      <div>Gastado (variable)<b id="sSpent">S/ 0</b></div>
+      <div>Te queda para el mes<b id="sLeft">S/ 0</b></div>
+      <div>Meta de ahorro<b id="sGoal">S/ 0</b></div>
+      <div>Días restantes<b id="sDays">0</b></div>
+    </div>
+  </div>
+  <div class="fine">
+    <button class="ghost" id="edit" type="button">Cambiar mi configuración</button>
+    <button class="ghost" id="reset" type="button">Borrar todo</button>
+  </div>
+  <p class="muted fine" id="nostore" hidden>Tu navegador no permite guardar datos: se perderán al cerrar la página.</p>
+</section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var KEY='ahorraplus:v1';
+  var $=function(id){return document.getElementById(id)};
+  var pad=function(n){return (n<10?'0':'')+n};
+  var dayKey=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+  var monthKey=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)};
+  var money=function(n){var v=Math.round(n*100)/100;return 'S/ '+v.toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:2})};
+  var r2=function(n){return Math.round(n*100)/100};
+  function num(id){var v=parseFloat(String($(id).value).replace(',','.'));return isNaN(v)||v<0?0:r2(v)}
+
+  // ---- Estado persistente ----
+  var state={cfg:null,items:[]}, canStore=true;
+  function load(){
+    try{var raw=localStorage.getItem(KEY);if(raw){var s=JSON.parse(raw);if(s&&typeof s==='object'){state.cfg=s.cfg||null;state.items=Array.isArray(s.items)?s.items:[]}}}
+    catch(e){canStore=false}
+  }
+  function save(){
+    try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){canStore=false;$('nostore').hidden=false}
+  }
+
+  // ---- Cálculos (se recalculan con la fecha actual en cada render) ----
+  function calc(){
+    var now=new Date(), today=dayKey(now), month=monthKey(now);
+    var dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    var daysLeft=dim-now.getDate()+1;
+    var c=state.cfg, free=c.inc-c.fix-c.goal;
+    var mItems=state.items.filter(function(x){return x.d.slice(0,7)===month});
+    var before=c.prev, spentToday=0, todays=[];
+    mItems.forEach(function(x){if(x.d===today){spentToday+=x.a;todays.push(x)}else if(x.d<today){before+=x.a}});
+    var base=(free-before)/daysLeft;
+    return {now:now,today:today,daysLeft:daysLeft,free:free,before:before,spentToday:spentToday,todays:todays,
+            base:base,avail:base-spentToday,monthSpent:before+spentToday};
+  }
+
+  // ---- Navegación ----
+  function showSetup(isEdit,newMonth){
+    var c=state.cfg;
+    $('inc').value=c?c.inc:'';$('fix').value=c?c.fix||'':'';$('goal').value=c?c.goal||'':'';
+    $('prev').value=c&&!newMonth&&c.prev?c.prev:'';
+    $('newmonth').hidden=!newMonth;$('cancel').hidden=!isEdit;$('serr').textContent='';
+    $('home').hidden=true;$('setup').hidden=false;$('inc').focus();
+  }
+  function showHome(){$('setup').hidden=true;$('home').hidden=false;render()}
+
+  $('setupForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var c={inc:num('inc'),fix:num('fix'),goal:num('goal'),prev:num('prev'),month:monthKey(new Date())};
+    if(c.inc<=0){$('serr').textContent='Ingresa tu ingreso del mes.';$('inc').focus();return}
+    var registered=state.items.filter(function(x){return x.d.slice(0,7)===c.month}).reduce(function(s,x){return s+x.a},0);
+    if(c.inc-c.fix-c.goal-c.prev-registered<=0){
+      $('serr').textContent='Tus gastos fijos, tu meta y lo ya gastado igualan o superan tu ingreso. Baja la meta o revisa los montos.';return}
+    state.cfg=c;
+    // Solo conservamos los gastos de este mes y el anterior para no llenar el almacenamiento
+    var d=new Date(),prevM=monthKey(new Date(d.getFullYear(),d.getMonth()-1,1));
+    state.items=state.items.filter(function(x){var m=x.d.slice(0,7);return m===c.month||m===prevM});
+    save();showHome();
+  });
+  $('cancel').onclick=showHome;
+  $('edit').onclick=function(){showSetup(true,false)};
+  $('reset').onclick=function(){
+    if(!confirm('¿Borrar tu configuración y todos tus gastos? No se puede deshacer.'))return;
+    state={cfg:null,items:[]};try{localStorage.removeItem(KEY)}catch(e){}
+    showSetup(false,false);
+  };
+
+  $('addForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var a=num('amt');
+    if(a<=0){$('herr').textContent='Escribe un monto mayor a 0.';$('amt').focus();return}
+    $('herr').textContent='';
+    var now=new Date();
+    state.items.push({id:now.getTime()+'-'+Math.random().toString(36).slice(2,6),a:a,n:$('note').value.trim()||'Gasto',d:dayKey(now)});
+    save();$('amt').value='';$('note').value='';render();$('amt').focus();
+  });
+
+  function render(){
+    if(!state.cfg)return;
+    if(state.cfg.month!==monthKey(new Date())){showSetup(false,true);return}
+    var k=calc(), h=$('hero');
+    h.className='hero '+(k.avail<=0?'bad':k.avail<k.base*0.4?'warn':'ok');
+    $('avail').textContent=money(Math.max(k.avail,0));
+    $('fill').style.width=(k.base>0?Math.max(0,Math.min(100,k.avail/k.base*100)):0)+'%';
+    var msg;
+    if(k.base<=0){msg='Ya usaste todo tu dinero libre del mes. Lo que gastes saldrá de tu meta de ahorro.'}
+    else if(k.avail>0){msg='De '+money(k.base)+' para hoy. Quedan '+k.daysLeft+' día'+(k.daysLeft>1?'s':'')+' del mes.'}
+    else{
+      msg='Te pasaste por '+money(-k.avail)+'. ';
+      if(k.daysLeft>1){var tm=(k.free-k.monthSpent)/(k.daysLeft-1);
+        msg+=tm>0?'Mañana tendrás '+money(tm)+' para gastar.':'Lo que gastes desde ahora saldrá de tu meta de ahorro.'}
+      else{msg+='Hoy es el último día del mes.'}
+    }
+    $('msg').textContent=msg;
+
+    var ul=$('list');ul.textContent='';
+    k.todays.slice().reverse().forEach(function(x){
+      var li=document.createElement('li');
+      var s=document.createElement('span');s.textContent=x.n+' · '+money(x.a);
+      var b=document.createElement('button');b.type='button';b.textContent='Borrar';b.setAttribute('aria-label','Borrar '+x.n+' de '+money(x.a));
+      b.onclick=function(){state.items=state.items.filter(function(y){return y.id!==x.id});save();render()};
+      li.appendChild(s);li.appendChild(b);ul.appendChild(li);
+    });
+    $('empty').hidden=k.todays.length>0;
+
+    var mName=k.now.toLocaleDateString('es-PE',{month:'long'});
+    $('monthTitle').textContent='Resumen de '+mName;
+    $('sSpent').textContent=money(k.monthSpent);
+    var left=k.free-k.monthSpent;
+    $('sLeft').textContent=left>=0?money(left):'−'+money(-left);
+    $('sGoal').textContent=money(left>=0?state.cfg.goal:Math.max(state.cfg.goal+left,0));
+    $('sDays').textContent=k.daysLeft;
+  }
+
+  // Si la app queda abierta y cambia el día, se recalcula al volver a ella
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&!$('home').hidden)render()});
+
+  load();
+  if(!canStore)$('nostore').hidden=false;
+  if(state.cfg){if(state.cfg.month===monthKey(new Date()))showHome();else showSetup(false,true)}
+
+  if('serviceWorker' in navigator&&location.protocol==='https:'){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
